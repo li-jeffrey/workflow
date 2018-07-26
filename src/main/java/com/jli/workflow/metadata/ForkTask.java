@@ -1,16 +1,14 @@
-package com.jli.workflow.metadata.task;
+package com.jli.workflow.metadata;
 
-import com.jli.workflow.components.ForkTaskRunner;
-import com.jli.workflow.components.TaskRunner;
-import com.jli.workflow.metadata.Workflow;
+import com.jli.workflow.execution.ForkTaskRunner;
+import com.jli.workflow.execution.TaskRunner;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
 
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 
 @Getter
 @Setter
@@ -21,8 +19,8 @@ public class ForkTask implements Task {
     private final Map<String, Object> inputParameters = new HashMap<>();
     private ForkTaskRunner runner;
 
-    private final Queue<Task> left = new LinkedList<>();
-    private final Queue<Task> right = new LinkedList<>();
+    private List<Task> left;
+    private List<Task> right;
 
     @Override
     public void execute(Workflow workflow) {
@@ -35,5 +33,17 @@ public class ForkTask implements Task {
         }
 
         this.runner = (ForkTaskRunner) runner;
+    }
+
+    public Map<String, Object> getInputParameters() {
+        throw new UnsupportedOperationException();
+    }
+
+    public String getReferenceName() {
+        throw new UnsupportedOperationException();
+    }
+
+    public void setReferenceName(String referenceName) {
+        throw new UnsupportedOperationException();
     }
 }

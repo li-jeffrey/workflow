@@ -1,28 +1,23 @@
-package com.jli.workflow.components;
+package com.jli.workflow.execution;
 
-import com.jli.workflow.execution.TaskResult;
-import com.jli.workflow.execution.TaskStatus;
+import com.jli.workflow.WorkflowExecutor;
+import com.jli.workflow.metadata.ForkTask;
+import com.jli.workflow.metadata.Task;
 import com.jli.workflow.metadata.Workflow;
-import com.jli.workflow.metadata.task.ForkTask;
-import com.jli.workflow.metadata.task.Task;
 import lombok.extern.slf4j.Slf4j;
-import org.greenrobot.eventbus.EventBus;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-import java.util.Queue;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
-@Component
 @Slf4j
 public class ForkTaskRunner implements TaskRunner {
 
-    @Autowired
-    private ExecutorService executorService;
+    private final ExecutorService executorService;
 
-    @Autowired
-    private EventBus eventBus;
+    public ForkTaskRunner(ExecutorService executorService) {
+        this.executorService = executorService;
+    }
 
     @Override
     public void run(Workflow workflow, Task task) {
@@ -40,14 +35,19 @@ public class ForkTaskRunner implements TaskRunner {
         }
     }
 
-    private void runAllTasks(Queue<Task> tasks, Workflow workflow) {
-        while(!tasks.isEmpty()) {
-            tasks.remove().execute(workflow);
+    @Override
+    public String getReferenceName() {
+        return "";
+    }
+
+    private void runAllTasks(List<Task> tasks, Workflow workflow) {
+        for (Task task : tasks) {
+            task.execute(workflow);
         }
     }
 
     private void fail(Integer workflowId, Throwable e) {
-        eventBus.post(new TaskResult(workflowId, TaskStatus.FAILED, e.getMessage()));
+        WorkflowExecutor.abortTask(new TaskAbort(workflowId, TaskStatus.FAILED, e.getMessage()));
         log.error("Error while executing task ", e);
     }
 }

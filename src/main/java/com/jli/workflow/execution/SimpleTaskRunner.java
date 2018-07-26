@@ -1,21 +1,13 @@
-package com.jli.workflow.components;
+package com.jli.workflow.execution;
 
-import com.jli.workflow.execution.TaskResult;
-import com.jli.workflow.execution.TaskStatus;
+import com.jli.workflow.WorkflowExecutor;
+import com.jli.workflow.metadata.Task;
 import com.jli.workflow.metadata.Workflow;
-import com.jli.workflow.metadata.task.Task;
 import lombok.extern.slf4j.Slf4j;
-import org.greenrobot.eventbus.EventBus;
 import org.slf4j.helpers.MessageFormatter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
 public abstract class SimpleTaskRunner implements TaskRunner {
-
-    @Autowired
-    private EventBus eventBus;
 
     @Override
     public void run(Workflow workflow, Task task) {
@@ -26,21 +18,24 @@ public abstract class SimpleTaskRunner implements TaskRunner {
         }
     }
 
+    @Override
+    public abstract String getReferenceName();
+
     protected abstract void runInternal(Workflow workflow, Task task);
 
-    protected void fail(Integer workflowId, Throwable e) {
-        eventBus.post(new TaskResult(workflowId, TaskStatus.FAILED, e.getMessage()));
+    private void fail(Integer workflowId, Throwable e) {
+        WorkflowExecutor.abortTask(new TaskAbort(workflowId, TaskStatus.FAILED, e.getMessage()));
         log.error("Error while executing task ", e);
     }
 
     protected void terminate(Integer workflowId, String message) {
-        eventBus.post(new TaskResult(workflowId, TaskStatus.TERMINATED, message));
+        WorkflowExecutor.abortTask(new TaskAbort(workflowId, TaskStatus.TERMINATED, message));
         log.info("Workflow terminated: {}", message);
     }
 
     protected void terminate(Integer workflowId, String message, Object... args) {
         String builtMsg = MessageFormatter.arrayFormat(message, args).getMessage();
-        eventBus.post(new TaskResult(workflowId, TaskStatus.TERMINATED, builtMsg));
+        WorkflowExecutor.abortTask(new TaskAbort(workflowId, TaskStatus.TERMINATED, builtMsg));
         log.info("Workflow terminated: {}", builtMsg);
     }
 }

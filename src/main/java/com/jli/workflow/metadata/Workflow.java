@@ -1,45 +1,106 @@
 package com.jli.workflow.metadata;
 
-import com.jli.workflow.execution.WorkflowStatus;
-import com.jli.workflow.metadata.task.Task;
-import lombok.Getter;
-import lombok.Setter;
+import com.google.common.base.Stopwatch;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import lombok.*;
 
-import java.time.Instant;
+import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Getter
-@Setter
+@RequiredArgsConstructor
 public class Workflow {
+
+    @Setter(AccessLevel.PRIVATE)
     private Integer id;
-    private String name;
-    private String description;
-    private Queue<Task> tasks;
-    private WorkflowStatus status = WorkflowStatus.QUEUED;
-    private long startTime;
-    private long endTime;
+    private final String name;
+    private final String description;
 
-    private final Map<String, Object> computationResults = new ConcurrentHashMap<>();
+    @Setter(AccessLevel.PRIVATE)
+    private String runtimeMessage;
 
-    public void execute() {
-        tasks.remove().execute(this);
+    private final List<Task> tasks;
+    private final AtomicReference<WorkflowStatus> status = new AtomicReference<>(WorkflowStatus.QUEUED);
+    private final Stopwatch stopwatch = Stopwatch.createUnstarted();
+    private final Cache<String, Object> cache = CacheBuilder.newBuilder().build();
+
+    @Getter(AccessLevel.NONE)
+    private final AtomicInteger taskIndex = new AtomicInteger(0);
+
+    public synchronized void start(int id) {
+        if (!status.compareAndSet(WorkflowStatus.QUEUED, WorkflowStatus.RUNNING)) {
+            throw new IllegalStateException("Workflow#" + id + " has already started");
+        }
+        setId(id);
+        stopwatch.start();
+        executeNext();
     }
 
-    public void addComputationResult(String key, Object result) {
-        computationResults.put(key, result);
+    public synchronized void executeNext() {
+        tasks.get(taskIndex.getAndIncrement()).execute(this);
     }
 
-    public void addComputationResult(Map<String, Object> result) {
-        computationResults.putAll(result);
+    public synchronized void fail(String reason) {
+        stop();
+        if(!status.compareAndSet(WorkflowStatus.RUNNING, WorkflowStatus.FAILED)) {
+            throw new IllegalStateException("Could not fail workflow#" + id);
+        }
+        setRuntimeMessage(reason);
+    }
+
+    public synchronized void terminate(String reason) {
+        stop();
+        if(!status.compareAndSet(WorkflowStatus.RUNNING, WorkflowStatus.TERMINATED)) {
+            throw new IllegalStateException("Could not terminate workflow#" + id);
+        }
+        setRuntimeMessage(reason);
+    }
+
+    public synchronized void cancel(String message) {
+        stop();
+        if(!status.compareAndSet(WorkflowStatus.RUNNING, WorkflowStatus.CANCELLED)) {
+            throw new IllegalStateException("Could not cancel workflow#" + id);
+        }
+        setRuntimeMessage(message);
+    }
+
+    public synchronized void complete() {
+        stop();
+        if(!status.compareAndSet(WorkflowStatus.RUNNING, WorkflowStatus.COMPLETE)) {
+            throw new IllegalStateException("Could not complete workflow#" + id);
+        }
+    }
+
+    private void stop() {
+        stopwatch.stop();
+    }
+
+    public void putResult(String key, Object result) {
+        cache.put(key, result);
+    }
+
+    public void putResults(Map<String, Object> results) {
+        cache.putAll(results);
+    }
+
+    public Object getResult(String key) {
+        return cache.getIfPresent(key);
     }
 
     public boolean isComplete() {
-        return tasks.size() == 0;
+        return status.get() == WorkflowStatus.RUNNING && taskIndex.get() >= tasks.size();
+    }
+
+    public WorkflowStatus getStatus() {
+        return status.get();
     }
 
     public long getElapsed() {
-        return endTime == 0 ? Instant.now().toEpochMilli() - startTime : endTime - startTime;
+        return stopwatch.elapsed(TimeUnit.SECONDS);
     }
+
 }

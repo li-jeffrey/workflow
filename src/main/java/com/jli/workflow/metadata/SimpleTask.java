@@ -1,8 +1,7 @@
-package com.jli.workflow.metadata.task;
+package com.jli.workflow.metadata;
 
-import com.jli.workflow.components.SimpleTaskRunner;
-import com.jli.workflow.components.TaskRunner;
-import com.jli.workflow.metadata.Workflow;
+import com.jli.workflow.execution.SimpleTaskRunner;
+import com.jli.workflow.execution.TaskRunner;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;

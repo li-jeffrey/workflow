@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public class TaskResult {
+public class TaskAbort {
     private final Integer workflowId;
     private final TaskStatus status;
     private final String message;
