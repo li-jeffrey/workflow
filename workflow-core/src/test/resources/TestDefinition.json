@@ -1,0 +1,53 @@
+{
+  "name": "kitchensink",
+  "description": "kitchensink workflow",
+  "tasks": [
+    {
+      "name": "task_1",
+      "referenceName": "task_1",
+      "inputParameters": {
+        "mod": "${mod}",
+        "oddEven": "${oddEven}"
+      },
+      "type": "SIMPLE"
+    },
+    {
+      "name": "forktask_1",
+      "type": "FORK",
+      "forkTasks": [
+        [
+          {
+            "name": "task_2a",
+            "referenceName": "task_2",
+            "inputParameters": {
+              "mod": "${mod}",
+              "oddEven": "${oddEven}"
+            },
+            "type": "SIMPLE"
+          }
+        ],
+        [
+          {
+            "name": "task_2b",
+            "referenceName": "task_2",
+            "inputParameters": {
+              "mod": "${mod}",
+              "evenOdd": "${evenOdd}"
+            },
+            "type": "SIMPLE"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "task_join",
+      "referenceName": "task_join",
+      "inputParameters": {
+        "task2a": "${weight.task2a}",
+        "task2b": "${weight.task2b}"
+      },
+      "joinOn": ["task2a", "task2b"],
+      "type": "JOIN"
+    }
+  ]
+}
